@@ -1,3 +1,6 @@
+# Estudos sobre MongoDB
+[Link do Curso](https://www.udemy.com/course/mongodb-curso-completo/)
+
 # Aula 8. Instalando no windows
 - [Link](https://www.youtube.com/watch?v=gB6WLkSrtJk)
 - **NOTA 1:** Desmarcar *Install MongoDB as a Service* para que ele não inicie junto com windows.
