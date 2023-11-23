@@ -91,4 +91,37 @@ db.alunos.insert({
 - **db.alunos.findOne()._id** retorna somente o ObjectId.
 - **db.alunos.findOne()._id.getTimestamp()** retorna a data de criação do objeto *ISODate('2023-11-21T17:16:56.000Z')*
 - Seu timestamp é baseado no horário do cliente, não do servidor. 
-- 
+
+# Aula 22. MongoDB como um processo independente
+- **mongod --dbpath \<caminho-do-diretório-do-db> --fork** mais o comando **--logpath**(utiliza um arquivo próprio para armazenar os logs) ou **--syslog**(pega os logs do mongodb e coloca junto com os logs do SO [não funciona no windows]) 
+- **--dbpath** não é obrigatório se houver criado o diretórios padrões em **C:\data\db**.
+- **NOTA**: --fork somente funciona no windows se o mongodb houver sido iniciado como um [serviço do windows](https://www.mongodb.com/community/forums/t/how-to-use-fork-in-windows-os/12959/2).
+
+# Aula 24. CRUD e sua aplicação com o MongoDB
+[Link](https://www.mongodb.com/docs/manual/reference/method/js-collection/#collection-methods) para métodos do mongo no terminal.
+[Link](https://www.mongodb.com/docs/v7.0/crud/#mongodb-crud-operations) para as operações de CRUD.
+**CREATE**
+  - insert
+  - insertOne
+  - insertMany
+  - bulkWrite
+**READ**
+- find
+- findOne
+**UPDATE**
+- update
+- updateOne
+- updateMany
+**DELETE**
+- deleteOne
+- deleteMany
+
+# Aula 25. C - Inserindo dados com insertOne e insertMany
+insert aceita:
+- db.crud.insert({a: 123})
+- db.crud.insert([{a: 123}, {b: 456}])
+[insertOne](https://www.mongodb.com/docs/v7.0/reference/method/db.collection.insertOne/#syntax) aceita somente:
+- db.crud.insertOne({a: 123})
+- [insertMany](https://www.mongodb.com/docs/v7.0/reference/method/db.collection.insertMany/#syntax) aceita:
+- db.crud.insertMany([{a: 123}, {b: 456}, {c: 789}])
+- db.crud.insertMany([{a: 123}, {b: 456}, {c: 789}, {d: 028}], {ordered: false}) - faz tratamento de erro. Por exemplo, se o **ordered** estiver **true**, ele adiciona cada objeto um por um em sequência, entretanto, se o objeto **b** houver algum erro (de validação, p.e.), os elementos **c** e **d** não serão inseridos. Já com **ordered** estiver **false**, ele continuará inserindo.
