@@ -1,5 +1,5 @@
 # Estudos sobre MongoDB
-[Link do Curso](https://www.udemy.com/course/mongodb-curso-completo/)
+[Curso Completo MongoDB 2023 [NoSQL do Básico ao Avançado!]](https://www.udemy.com/course/mongodb-curso-completo/)
 
 # Seção 2 - Instalação
 ## Aula 8. Instalando no windows
@@ -276,3 +276,176 @@ meudb> db.crud.find()
 - db.crud.deleteMany({h: {$exists: true}}) - apaga todos os registros com base no exists.
 
 # Seção 5 - Modelagem e Relacionamentos
+- MongoDB não é um BD relacional, mas há formas de contornar essa situação.
+
+## Aula 33. One To One | Um Para Um
+- Num relacionamento **One To One - Estudante to Carteirinha**.
+- Podemos fazer referência, semelhante em um BD relacional.
+- Podemos usar **Embedded Document**:
+```json
+{
+  "_id": 1,
+  "cpf": "123456798",
+  "nome": "Joãozinho",
+  "cidade": "São Paulo",
+  "carteirinha": {
+    "_id": 8,
+      "turma": "220A",
+      "ra": 1245
+  }
+}
+```
+- **carteirinha** é o Embedded document.
+
+## Aula 35. One To Many | Um Para Muitos
+- Num relacionamento **One To Many - Setor To Funcionário**.
+- Podemos fazer referência, semelhante em um BD relacional. 
+- Podemos usar **Embedded Document**:
+```json
+{
+  "_id": 3,
+  "meta": 4000,
+  "nome": "Vendas",
+  "funcionarios": [
+      {
+          "_id": 8,
+          "salario": 1400,
+          "turno": "tarde",
+          "cargo": "vendedor"
+      },
+      {
+          "_id": 12,
+          "salario": 1600,
+          "turno": "noite",
+          "cargo": "vendedor"
+      }
+  ]
+} 
+```
+
+## Aula 37. Many To Many | Muitos Para Muitos | Tabela auxiliar
+## Aula 38. Many To Many | Muitos Para Muitos | Referência
+- Num relacionamento **Many To Many - Fornecedor To Produto**.
+- Podemos fazer referência, semelhante em um BD relacional.
+- Podemos usar **Arrays**:
+```json
+// Collection Fornecedores
+{
+  "_id": "f04",
+  "cnpj": "165486984",
+  "nome": "Fornecedor Legal",
+  "cep": "1098465",
+  "produto_ids": ["p16", "p21"]
+}
+
+{
+  "_id": "f07",
+  "cnpj": "98498151",
+  "nome": "Fornecedor Maneiro",
+  "cep": "198498",
+  "produto_ids": ["p21", "p47"]
+}
+// Collection Produtos
+{
+  "_id": "p16",
+  "descricao": "Panela",
+  "preco": 45.50,
+  "fornecedor_ids": ["f04"]
+}
+
+{
+  "_id": "p21",
+  "descricao": "Prato",
+  "preco": 14,
+  "fornecedor_ids": ["f04", "f07"]
+} 
+
+{
+  "_id": "p47",
+  "descricao": "Faqueiro",
+  "preco": 127.46,
+  "fornecedor_ids": ["f07"]
+}
+```
+
+# Aula 40. Many To Many | Muitos Para Muitos | Híbrido de Referência com Embedded
+- Mesmo relacionamento que a aula passada, mas na seguinte situação, dois fornecedores vendem o mesmo produto mas com valores diferentes:
+```json
+// Collection Fornecedores
+{
+  "_id": "f04",
+  "cnpj": "165486984",
+  "nome": "Fornecedor Legal",
+  "cep": "1098465",
+  "produtos": [
+      {
+          "_id": "p16",
+          "preco": 46.50
+      },
+      {
+          "_id": "p21",
+          "preco": 12
+      }
+  ]
+}
+
+{
+  "_id": "f07",
+  "cnpj": "98498151",
+  "nome": "Fornecedor Maneiro",
+  "cep": "198498",
+  "produtos": [
+      {
+          "_id": "p21",
+          "preco": 16
+      },
+      {
+          "_id": "p47",
+          "preco": 127.46
+      }
+  ]
+}
+
+
+// Collection Produtos
+{
+  "_id": "p16",
+  "descricao": "Panela",
+  "fornecedores": [
+      {
+          "_id": "f04",
+          "preco": 46.50
+      }
+  ]
+}
+
+{
+  "_id": "p21",
+  "descricao": "Prato",
+  "fornecedores": [
+      {
+          "_id": "f04",
+          "preco": 12
+      },
+      {
+          "_id": "f07",
+          "preco": 16
+      }
+  ]
+} 
+
+{
+  "_id": "p47",
+  "descricao": "Faqueiro",
+  "fornecedores": [
+      {
+          "_id": "f07",
+          "preco": 127.46
+      }
+  ]
+}
+```
+
+# Aula 42. Duplicar ou não duplicar? Segredos e vantagens desse modelo
+- Se tem mais leituras que updates/alteração é ideal usar a duplicação de dados, como visto na aula anterior.
+- Se houver mais alterações do que leituras, é melhor não usar.
