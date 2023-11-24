@@ -1,8 +1,9 @@
 # Estudos sobre MongoDB
 [Curso Completo MongoDB 2023 [NoSQL do Básico ao Avançado!]](https://www.udemy.com/course/mongodb-curso-completo/)
+- Link para o repositório oficial do [curso](https://github.com/renanpallin/udemy-mongodb).
 
 # Seção 2 - Instalação
-## Aula 8. Instalando no windows
+### Aula 8. Instalando no windows
 - [Link](https://www.youtube.com/watch?v=gB6WLkSrtJk)
 - **NOTA 1:** Desmarcar *Install MongoDB as a Service* para que ele não inicie junto com windows.
 - **NOTA 2:** Criamos um diretório chamado **data** em *C:\\* e dentro de *data* criamos outro diretório chamado *db* (*C:\data\db*).
@@ -14,12 +15,12 @@
 
 # Seção 3 - Básico
 
-## Aula 11. Conhecendo o comando Mongo
+### Aula 11. Conhecendo o comando Mongo
 - mongod -> o daemon do mongo, o mongo em si, o BD.
 - mongosh -> o cliente.
 - mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.1.0 -> linha de conexão padrão com o BD.
 
-## Aula 14. Inserindo nosso primeiro documento
+### Aula 14. Inserindo nosso primeiro documento
 - **db.\<tecla tab>** apresenta os comandos disponíveis.
 - **db** demonstra o banco de dados em que estamos conectados.
 - **use \<nome_do_banco>** cria no **SHELL** um novo banco, ou seja, ainda não gravou em disco o novo BD.
@@ -36,7 +37,7 @@
 }
 ```
 
-## Aula 15. Resgatando dados inseridos
+### Aula 15. Resgatando dados inseridos
 -  Com o BD selecionado:
 -  **db.\<nome_da_collection>.find().pretty()** o qual retornará os objetos presentes no BD com uma formatação legível.
 -  Retorna todos os objetos json com id gerado automaticamente pelo próprio MongoDB:
@@ -47,16 +48,16 @@
 ] 
  ```
 
-## Aula 16. Conceitos básicos: Database, Collection e Document
+### Aula 16. Conceitos básicos: Database, Collection e Document
 - **Database** - BD, a raiz a qual receberá as colletions.
 - **Collection** - funcionam como diretórios. Um BD pode ter várias collections. São agrupados com algum sentido em comum. Uma collection precisa pertencer a um BD.
 - **Document** - O objeto armazenado no BD. Entretanto um objeto é armazenado a uma collection.
 - Então, um ou mais objetos pertencem a uma collection, e uma ou mais collection pertencem a um banco de dados.
 
-## Aula 17. Criando nosso primeiro documento
-## Aula 18. Entendendo os tipos de dados
-## Aula 19. Inserindo o aluno na escola
-## Aula 20. Destrinchando o ObjectID e entendendo seus benefícios
+### Aula 17. Criando nosso primeiro documento
+### Aula 18. Entendendo os tipos de dados
+### Aula 19. Inserindo o aluno na escola
+### Aula 20. Destrinchando o ObjectID e entendendo seus benefícios
 - BSON - Binary JSON -  tipo ao qual é armazenado no MongoDB.
 - BSON tem outros tipos de dados, como Double, Binary Data, Date, etc..
 - Ver neste [link](https://www.mongodb.com/docs/v7.0/reference/bson-types/?tck=docs_chatbot#bson-types).
@@ -90,17 +91,19 @@ db.alunos.insert({
 - É possível usar uma outra chave padrão, como números sequênciais não repetidos.
 - Para entender melhor o **[ObjectId](https://www.mongodb.com/docs/v7.0/reference/bson-types/?tck=docs_chatbot#objectid)**.
 
-## Aula 21. Resgatando o Timestamp do ObjectID
+### Aula 21. Resgatando o Timestamp do ObjectID
 - **db.alunos.findOne()._id** retorna somente o ObjectId.
 - **db.alunos.findOne()._id.getTimestamp()** retorna a data de criação do objeto *ISODate('2023-11-21T17:16:56.000Z')*
 - Seu timestamp é baseado no horário do cliente, não do servidor. 
 
-## Aula 22. MongoDB como um processo independente
+# Seção 4 - CRUD
+
+### Aula 22. MongoDB como um processo independente
 - **mongod --dbpath \<caminho-do-diretório-do-db> --fork** mais o comando **--logpath**(utiliza um arquivo próprio para armazenar os logs) ou **--syslog**(pega os logs do mongodb e coloca junto com os logs do SO [não funciona no windows]) 
 - **--dbpath** não é obrigatório se houver criado o diretórios padrões em **C:\data\db**.
 - **NOTA**: --fork somente funciona no windows se o mongodb houver sido iniciado como um [serviço do windows](https://www.mongodb.com/community/forums/t/how-to-use-fork-in-windows-os/12959/2).
 
-## Aula 24. CRUD e sua aplicação com o MongoDB
+### Aula 24. CRUD e sua aplicação com o MongoDB
 [Link](https://www.mongodb.com/docs/manual/reference/method/js-collection/#collection-methods) para métodos do mongo no terminal.
 [Link](https://www.mongodb.com/docs/v7.0/crud/#mongodb-crud-operations) para as operações de CRUD.
 **CREATE**
@@ -119,7 +122,7 @@ db.alunos.insert({
 - deleteOne
 - deleteMany
 
-## Aula 25. C - Inserindo dados com insertOne e insertMany
+### Aula 25. C - Inserindo dados com insertOne e insertMany
 insert aceita:
 - db.crud.insert({a: 123})
 - db.crud.insert([{a: 123}, {b: 456}])
@@ -129,7 +132,7 @@ insert aceita:
 - db.crud.insertMany([{a: 123}, {b: 456}, {c: 789}])
 - db.crud.insertMany([{a: 123}, {b: 456}, {c: 789}, {d: 028}], {ordered: false}) - faz tratamento de erro. Por exemplo, se o **ordered** estiver **true**, ele adiciona cada objeto um por um em sequência, entretanto, se o objeto **b** houver algum erro (de validação, p.e.), os elementos **c** e **d** não serão inseridos. Já com **ordered** estiver **false**, ele continuará inserindo.
 
-## Aula 26. Insert ordenado ou não-ordenado?
+### Aula 26. Insert ordenado ou não-ordenado?
 - Digamos que temos esses objetos no BD:
 ```json
 [ 
@@ -143,7 +146,7 @@ insert aceita:
 - Com ordered:false: **db.testInsertMany.insertMany([{_id:2}, {_id: 7, msg: 'teste'}, {_id:4, msg: 'teste2'}], {ordered: false})**
 - Retorna o erro **code:11000** e **insertedCount: 2**, ou seja, insere os dados que não estejam errados
 
-## Aula 27. R - Buscando dados com find e findOne
+### Aula 27. R - Buscando dados com find e findOne
 - Método [find](https://www.mongodb.com/docs/v7.0/crud/#read-operations) retorna um cursor ao invés de um objeto javascript. Ele aceita:
 - db.crud.find() - retorna todos os dados.
 - db.crud.find({b: 123}) - retorna todos os dados semelhantes a query/filter dentro dos parênteses.
@@ -157,7 +160,7 @@ insert aceita:
 - db.alunos.findOne({}, { nome: 1, matérias: 1 }) - 1ª chaves é a query/filter, 2ª chaves são os campos a serem retornados, 1 de cada no caso.
 - db.alunos.findOne({}, { nome: 1, matérias: 1, _id: 0 }) - mesma coisa que acima mas não retorna o id.
 
-## Aula 28. U - Atualizando dados com update, updateOne e replaceOne
+### Aula 28. U - Atualizando dados com update, updateOne e replaceOne
 - No método [update](https://www.mongodb.com/docs/v7.0/crud/#update-operations), geralmente fazemos uma busca do objeto que queremos alterar e depois sim o modificamos.
 - um exemplo de [updateOne](https://www.mongodb.com/docs/v7.0/reference/method/db.collection.updateOne/#syntax) com findOne:
 ```bash
@@ -266,7 +269,7 @@ meudb> db.crud.find()
 ]
 ```
 
-## Aula 29. D - Nos livrando de dados com deleteOne e deleteMany
+### Aula 29. D - Nos livrando de dados com deleteOne e deleteMany
 - Método [delete](https://www.mongodb.com/docs/v7.0/crud/#delete-operations) é semelhante ao update, é melhora buscar 1º e depois executar o delete.
 - [deleteOne](https://www.mongodb.com/docs/v7.0/reference/method/db.collection.deleteOne/#syntax) tem somente o query/filter e apaga:
 - db.crud.deleteOne({a: 123}) - apaga o 1º objeto com esse query/filter.
@@ -278,7 +281,7 @@ meudb> db.crud.find()
 # Seção 5 - Modelagem e Relacionamentos
 - MongoDB não é um BD relacional, mas há formas de contornar essa situação.
 
-## Aula 33. One To One | Um Para Um
+### Aula 33. One To One | Um Para Um
 - Num relacionamento **One To One - Estudante to Carteirinha**.
 - Podemos fazer referência, semelhante em um BD relacional.
 - Podemos usar **Embedded Document**:
@@ -297,7 +300,7 @@ meudb> db.crud.find()
 ```
 - **carteirinha** é o Embedded document.
 
-## Aula 35. One To Many | Um Para Muitos
+### Aula 35. One To Many | Um Para Muitos
 - Num relacionamento **One To Many - Setor To Funcionário**.
 - Podemos fazer referência, semelhante em um BD relacional. 
 - Podemos usar **Embedded Document**:
@@ -323,8 +326,8 @@ meudb> db.crud.find()
 } 
 ```
 
-## Aula 37. Many To Many | Muitos Para Muitos | Tabela auxiliar
-## Aula 38. Many To Many | Muitos Para Muitos | Referência
+### Aula 37. Many To Many | Muitos Para Muitos | Tabela auxiliar
+### Aula 38. Many To Many | Muitos Para Muitos | Referência
 - Num relacionamento **Many To Many - Fornecedor To Produto**.
 - Podemos fazer referência, semelhante em um BD relacional.
 - Podemos usar **Arrays**:
@@ -368,7 +371,7 @@ meudb> db.crud.find()
 }
 ```
 
-# Aula 40. Many To Many | Muitos Para Muitos | Híbrido de Referência com Embedded
+## Aula 40. Many To Many | Muitos Para Muitos | Híbrido de Referência com Embedded
 - Mesmo relacionamento que a aula passada, mas na seguinte situação, dois fornecedores vendem o mesmo produto mas com valores diferentes:
 ```json
 // Collection Fornecedores
@@ -446,6 +449,206 @@ meudb> db.crud.find()
 }
 ```
 
-# Aula 42. Duplicar ou não duplicar? Segredos e vantagens desse modelo
+## Aula 42. Duplicar ou não duplicar? Segredos e vantagens desse modelo
 - Se tem mais leituras que updates/alteração é ideal usar a duplicação de dados, como visto na aula anterior.
 - Se houver mais alterações do que leituras, é melhor não usar.
+- Exemplo de dados duplicados na colllection de Fornecedores e Produtos, com relação ao produto:
+```json
+// Collection Fornecedores
+{
+    "_id": "f04",
+    "cnpj": "165486984",
+    "nome": "Fornecedor Legal",
+    "cep": "1098465",
+    "produtos": [
+        {
+            "_id": "p16",
+            "descricao": "Panela",
+            "preco": 46.50
+        },
+        {
+            "_id": "p21",
+            "descricao": "Prato",
+            "preco": 12
+        }
+    ]
+}
+ 
+{
+    "_id": "f07",
+    "cnpj": "98498151",
+    "nome": "Fornecedor Maneiro",
+    "cep": "198498",
+    "produtos": [
+        {
+            "_id": "p21",
+            "descricao": "Prato",
+            "preco": 16
+        },
+        {
+            "_id": "p47",
+            "descricao": "Faqueiro",
+            "preco": 127.46
+        }
+    ]
+}
+// Collection Produtos
+{
+    "_id": "p16",
+    "descricao": "Panela",
+    "fornecedores": [
+        {
+            "_id": "f04",
+            "preco": 46.50,
+            "cep": "1098465"
+        }
+    ],
+    "peso": 4,
+    "unidade_peso": "kg",
+    "altura": 14,
+    "largura": 15,
+    "profundidade": 20
+}
+ 
+{
+    "_id": "p21",
+    "descricao": "Prato",
+    "fornecedores": [
+        {
+            "_id": "f04",
+            "preco": 12,
+            "cep": "1098465"
+        },
+        {
+            "_id": "f07",
+            "preco": 16,
+            "cep": "198498",
+        }
+    ]
+} 
+ 
+{
+    "_id": "p47",
+    "descricao": "Faqueiro",
+    "fornecedores": [
+        {
+            "_id": "f07",
+            "preco": 127.46,
+            "cep": "198498",
+        }
+    ]
+}
+```
+
+# Seção 6 - Schema e Validation
+
+## Aula 44. Introdução ao createCollection
+- Link de documentação do [createCollection](https://www.mongodb.com/docs/manual/reference/method/db.createCollection/).
+- db.createCollection(name, [options](https://www.mongodb.com/docs/manual/reference/method/db.createCollection/#syntax))
+
+## Aula 45. O problema da falta de validação
+- Se acaso houver objetos no BD em que o tipo de dado de um sejam diferentes entre si, por evento de uma inserção pelo backend sem validação, por exemplo, em uma collection *cars*, repare no campo year:
+```json
+{
+  "model": "Fusca",
+  "madeBy": "Volkswagen",
+  "year": "2012"
+},
+{
+  "model": "Onix",
+  "madeBy": "Chevrolet",
+  "year": 2020
+}
+```
+- O MongoDB aceita essa inserção, porém se ocorrer uma busca pelo ano (*db.cars.find({year: 2012})*) o Fusca não será encontrado a não ser que façamos uma busca pelo ano com string ao invés de inteiro.
+
+## Aula 46. Como fazemos uma collection com validation
+- Sobre [Schema Validation](https://www.mongodb.com/docs/manual/core/schema-validation/).
+- Sobre [JSON Schema Validation](https://www.mongodb.com/docs/manual/core/schema-validation/specify-json-schema/#steps).
+- Basicamente, criamos a collection com nome e no campo **options** passamos o **validator**, o qual tem em sua estrutura o **$jsonSchema**, o qual contém as propriedades para validações.
+
+## Aula 47. Criando nossa collection carros
+## Aula 48. Finalizando a validação da nossa collection
+- bsonType: "object" - pq os documentos são objetos.
+- required: ["model", "year"] - só aceita o documento se todas propriedades descritas neste vetor estiverem presentes no documento.
+- properties: { campo1:{}, campo2:{} } - é o local onde configuramos os campos do documento para validação.
+- [Palavras chaves](https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/#available-keywords) que podem ser usadas com no **$jsonSchema**.
+- Exemplo de um $jsonSchema:
+```json
+db.createCollection("cars", {
+	validator: {
+		$jsonSchema: {
+			bsonType: "object",
+			required: ["model", "year"],
+			properties: {
+				model: {
+					bsonType: "string",
+					description: "O modelo é necessário e deve ser do tipo string."
+				},
+				madeBy: {
+					bsonType: "string",
+					minLength: 3
+				},
+				year: {
+					bsonType: "int",
+					minimum: 1980,
+					maximum: 2025
+				}
+			}
+		}
+	}
+})
+```
+
+# Aula 49. Testando as validações que criamos
+- db.cars.drop() - apaga a collection.
+- Como o bsonType do campo year é int (ver exemplo aula anterior), a inserção não pode ser **year: 2022**, pois resultará em erro, pois no js o campo **year** é do tipo **number** (e number aceita ponto flutuante), não **int**. Logo, precisamos usar uma função para converter:
+```json
+db.cars.insertOne({ "model": "Fiesta",  "madeBy": "Ford",  "year": NumberInt(2015) })
+db.cars.insertOne({ "model": "Fusca", "madeBy": "Volkswagen", "year": NumberInt(2012) })
+db.cars.insertOne({ "model": "Onix",  "madeBy": "Chevrolet",  "year": NumberInt(2020) })
+```
+
+## Aula 51. Capped Collections | Funciona como uma fila!
+[capped](https://www.mongodb.com/docs/manual/reference/method/db.createCollection/#syntax)
+
+- No campo **options** podemos passar um **capped**, o qual faz a collection trabalhar como uma fila. 
+- Digamos que estamos inserindo documentos diferentes por um longo tempo e por regra, os 1ºs documentos podem ser apagados, como por exemplo registros de logs.
+- size: 2048 - indica o tamanho (em bytes) de armazenamento que queremos em disco. Size é obrigatório.
+- max: 1000 - indica o nº máximo de documentos que a fila comporta, se entrar algum novo com a fila cheia, os mais antigos são retirados e inseridos os mais novos. Max não é obrigatório.
+- A precedência é com base no size e depois o max, logo, com 3 docs com 1MB cada, alocamos o 1º e o 2º, ao inserir o 3º o 1º é apagado.
+- Exemplo de capped:
+```json
+db.createCollection("logs", {
+  capped: true,
+  size: 2048,
+  max: 5
+})
+```
+- Inserções até estourar: **db.logs.insert({n: 1})** até **db.logs.insert({n: 6})**
+
+# Seção 7 - Algumas preparações para as queries
+
+## Aula 55. Conhecendo o repositório oficial do curso
+- Link para o repositório oficial do [curso](https://github.com/renanpallin/udemy-mongodb).
+
+## Aula 64. Importando dados com o mongoimport
+- Dentro do diretório em que está o arquivo .csv ou .json com os dados a serem importados usar o comando:
+- **mongoimport --db \<nome-do-banco-de-dados> --collection \<nome-da-collection> --type json --file \<nome-do-arquivo>.json --jsonArray**
+- para apagar um BD, ao conectar o BD com use, usar o comando db.dropDatabase().
+
+# Seção 8 - Queries! Vamos buscar nossos dados!
+
+## Aula 65. Rodando nossa primeira query - encontrando os pokémons legendários + count
+- Listar todos os pokémons legendários:
+  - terminal: **db.pokemon.find({ legendary: true })**
+  - compass: **{ legendary: true }**
+- Retornar quantidade total de pokémons legendários:
+  - terminal: **db.pokemon.find({ legendary: true }).count()**
+  - terminal: **db.pokemon.countDocuments({ legendary: true })** - 
+  - terminal: **db.pokemon.count({ legendary: true })** - DEPRECIADO
+
+## Aula 66. Entendendo o it no cursor e utilizando o distinct para encontrar as geracoes pos
+- Sobre **it**, ao executarmos uma busca, se a base de dados retornar uma quantidade muito grande, a quantidade retornada para visualizar é limitada tanto pelo compass quanto pelo terminal. Em ambos podemos alterar isso.
+- No terminal, ao final da busca aparecerá a palavra 'it' para digitar e receber a próxima página.
+- Sobre **distinct**, funciona exatamente como a clausúla de mesmo nome em BD relacionais, ele evitará de retornar dados não repetidos com base em um campo, p.e.: **db.pokemon.distinct("generation")**.
