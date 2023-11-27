@@ -652,3 +652,68 @@ db.createCollection("logs", {
 - Sobre **it**, ao executarmos uma busca, se a base de dados retornar uma quantidade muito grande, a quantidade retornada para visualizar é limitada tanto pelo compass quanto pelo terminal. Em ambos podemos alterar isso.
 - No terminal, ao final da busca aparecerá a palavra 'it' para digitar e receber a próxima página.
 - Sobre **distinct**, funciona exatamente como a clausúla de mesmo nome em BD relacionais, ele evitará de retornar dados não repetidos com base em um campo, p.e.: **db.pokemon.distinct("generation")**.
+
+## Aula 67. Buscando por nome e utilizando regex
+- Procurando por pokémon com as letras 'pik' em qualquer lugar do nome completo (semelhante a cláusula **LIKE** do SQL):
+  - db.pokemon.find({ name: /Pik/ })
+- Procurando por pokémon ao qual o nome começa com as letras 'pik':
+  - db.pokemon.find({ name: /^Pik/ })
+- Procurando por pokémon ao qual o nome termina com a letra 'a':
+  - db.pokemon.find({ name: /a$/ })
+
+## Aula 68. Entendendo o projection na pratica
+- Executando uma busca e retornando somente o nome:
+  - db.pokemon.find({ name: /^Pik/ }, { name: true })
+- Para outros campos do documento, pode-se alocar true ou false (1 ou 0) para serem apresentados na resposta da busca.
+
+## Aula 69. Aprendendo e utilizando flags no regex para case insensitive
+- Regex é case sensitive
+- Mas com o uso do 'i' ignoramos o case sensitive e tratamos as letras maiúsculas e minúsculas como iguais:
+  - db.pokemon.find({ name: /^pik/i }, { name: true })
+
+## Aula 70. Encontrando pokemons mais fortes com operadores de comparacao
+- Buscando pokémon com ataque em determinado valor:
+  - db.pokemon.find({ attack: 65 }, { name: 1, attack: 1 })
+- Buscando pokémon com ataque maior ou igual a um determinado valor:
+  - db.pokemon.find({ attack: { $gte: 85 } }, { name: 1, attack: 1 })
+
+## Aula 71. Entendendo os operadores de comparacao disponiveis para nos
+- Ver link para operadores de comparação do [MongoDB](https://www.mongodb.com/docs/manual/reference/operator/query-comparison/#comparison-query-operators).
+
+## Aula 72. Buscando strings dentro de arrays
+- Busca pokémons com "Fire" no campo types, sendo este um campo do tipo array:
+  - db.pokemon.find({ types: "Fire" }, { name: 1, types: 1, _id: 0 })
+
+## Aula 73. Selecionando uma faixa de valores para os arrays
+- Com operador **$in** buscamos, em um campo do tipo array, documentos que coincidam com um OU outro tipo:
+  - db.pokemon.find({ types: { $in: ["Fire", "Rock"]} }, { name: 1, types: 1, _id: 0 })
+- Com operador **$nin** buscamos, em um campo do tipo array, documentos que NÃO coincidam com um OU outro tipo, ou seja, é a negação do anterior:
+  - db.pokemon.find({ types: { $nin: ["Fire", "Rock"]} }, { name: 1, types: 1, _id: 0 })
+
+## Aula 74. $in e $nin nao sao apenas para arrays
+- O campo nome não é do tipo array, mas podemos usar **\$in** e **\$nin** na busca:
+  - db.pokemon.find({ name: { $in: ["Pichu", "Pikachu"]} })
+  - db.pokemon.find({ name: { $in: [/^Pi/, /^Pu/]} })
+
+## Aula 75. Nao caia nessa pegadinha com o $in
+- O operador **$in** não retorna uma faixa de valores quando executamos uma busca com dois parâmetros, pelo contrário, ele retorna todos os valores daqueles dois parâmetros, por exemplo, a busca abaixo não trará uma faixa de valores, e sim todos valores que correspondam a 80 e 90:
+  - db.pokemon.find({ defense: { $in: [80, 90] }}, { _id:0, name:1, defense:1 })
+
+# Seção 9: Queries - Combinando operadores e se aprofundando
+
+## Aula 76. Buscando por faixa de valores combinando operadores
+- Retornando uma faixa de valores de um campo:
+  - db.pokemon.find({ defense: { $gt: 60, $lte: 72 } }, { _id: 0, name: 1, defense: 1 })
+
+# Aula 77. Mesclando queries com operadores logicos $or
+- Link para operadores lógicos do [MongoDB](https://www.mongodb.com/docs/manual/reference/operator/query-logical/#logical-query-operators).
+- Buscando numa faixa de valores OU um outro valor específico, no caso, valores de defense entre 60 e 72 OU defense igual a 100:
+  - db.pokemon.find({ $or: [ { defense: { $gte: 60, $lte: 72 } }, { defense: 100 } ] }, { _id: 0, name: 1, defense: 1 })
+
+# Aula 78. Filtrando mais de um campo com o $or
+- Buscando pokémons que tenham valores de **attack** maior que 80 OU **defense** com valor maior que 80:
+  - db.pokemon.find({ $or: [ { defense: { $gte: 80 } }, { attack: { $gte: 80 } } ] }, { _id: 0, name: 1, defense: 1, attack: 1 })
+
+# Aula 79. Encontrando pokemons fortes OU com muita defesa
+- Buscando pokémons que tenham valores de **hp** E **attack** maiores que 80 OU **defense** E **speed** com valores maiores que 80:
+  - db.pokemon.find({ $or: [ { defense: { $gte: 80 }, hp: { $gte: 80 } }, { attack: { $gte: 80 }, speed: { $gte: 80 } } ] })
