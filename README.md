@@ -705,15 +705,126 @@ db.createCollection("logs", {
 - Retornando uma faixa de valores de um campo:
   - db.pokemon.find({ defense: { $gt: 60, $lte: 72 } }, { _id: 0, name: 1, defense: 1 })
 
-# Aula 77. Mesclando queries com operadores logicos $or
+## Aula 77. Mesclando queries com operadores logicos $or
 - Link para operadores lógicos do [MongoDB](https://www.mongodb.com/docs/manual/reference/operator/query-logical/#logical-query-operators).
 - Buscando numa faixa de valores OU um outro valor específico, no caso, valores de defense entre 60 e 72 OU defense igual a 100:
   - db.pokemon.find({ $or: [ { defense: { $gte: 60, $lte: 72 } }, { defense: 100 } ] }, { _id: 0, name: 1, defense: 1 })
 
-# Aula 78. Filtrando mais de um campo com o $or
+## Aula 78. Filtrando mais de um campo com o $or
 - Buscando pokémons que tenham valores de **attack** maior que 80 OU **defense** com valor maior que 80:
   - db.pokemon.find({ $or: [ { defense: { $gte: 80 } }, { attack: { $gte: 80 } } ] }, { _id: 0, name: 1, defense: 1, attack: 1 })
 
-# Aula 79. Encontrando pokemons fortes OU com muita defesa
+## Aula 79. Encontrando pokemons fortes OU com muita defesa
 - Buscando pokémons que tenham valores de **hp** E **attack** maiores que 80 OU **defense** E **speed** com valores maiores que 80:
   - db.pokemon.find({ $or: [ { defense: { $gte: 80 }, hp: { $gte: 80 } }, { attack: { $gte: 80 }, speed: { $gte: 80 } } ] })
+
+## Aula 80. Aprendendo a ordenar os dados com o sort
+- Para ordenar em ordem crescente, passamos o método [sort](https://www.mongodb.com/docs/manual/reference/method/cursor.sort/#cursor.sort--) com o dado a ser usado para ordenação com o valor 1, para decrescente, passamos com o valor -1: 
+  - db.pokemon.find({ $or: [ { defense: { $gte: 80 }, hp: { $gte: 80 } }, { attack: { $gte: 80 }, speed: { $gte: 80 } } ] }, { _id: 0 }).sort({ hp: 1 })
+- Também podemos passar mais de um parâmetro para executar a busca ordenada:
+  - db.pokemon.find({ $or: [ { defense: { $gte: 80 }, hp: { $gte: 80 } }, { attack: { $gte: 80 }, speed: { $gte: 80 } } ] }, { _id: 0 }).sort({ hp: 1, defense: -1, attack: 1 })
+- A ordem dos fields no sort importa.
+
+## Aula 82. Buscando pelo tamanho com o $size e por valores com o $all
+-  Com base no campo **types**, o qual é um vetor, podemos executar um busca com base no tamanho deste vetor, ou seja, o nº de elementos dentro dele:
+  - db.pokemon.find({ types: { $size: 1 } }, { _id: 0, name: 1, types: 1 })
+- Executando uma busca em o tipo retornado seja de um tipo E de outro tipo:
+
+## Aula 83. Mais de uma query com o mesmo resultado
+- Usando **$and** e recebendo mesmo resultado que $all:
+  - db.pokemon.find( { $and: [ { types: "Flying" }, { types: "Bug" } ]}, { _id: 0, name: 1, types: 1 })
+- As duas querys abaixo (com e sem **$and** são equivalentes):
+  - db.pokemon.find( { $and: [ { types: "Flying" }, { legendary: true } ]}, { _id: 0, name: 1, types: 1, legendary: 1 })
+  - db.pokemon.find( { types: "Flying", legendary: true }, { _id: 0, name: 1, types: 1, legendary: 1 })
+
+## Aula 85. Criando paginacao com skip e limit
+- Retornando uma lisat com 5 pokemons do tipo Fire mais fortes, no caso estamos buscando a página 2:
+  - db.pokemon.find( {  types: "Fire" }, { _id: 0, name: 1, attack: 1 } ).sort( { attack: -1 } ).skip(5).limit(5)
+- A paginação varia de acordom com o valor do limit, se limite for 5, então skip(0) é referente a pg 1, skip(5) pg 2, skip(10) pg 3, e assim sucessivamente.
+
+## Aula 86. Preparando pokemon com embeded document
+- Buscamos um pokemon, por exemplo:
+  - db.pokemon.find({name: "Charmander"})
+- Alteramos criando o embedded document **battle_points** via compass, pokemons com _id: 1 e _id: 5:
+```json
+{
+  "_id": 5,
+  "types": [
+    "Fire"
+  ],
+  "name": "Charmander",
+  "legendary": false,
+  "battle_points": {
+    "hp": 39,
+    "attack": 52,
+    "defense": 43,
+    "speed": 65
+  },
+  "generation": 1
+}
+```
+
+## Aula 87. Filtrando em embeded documents com o dot notation
+- Podemos buscar dados com base se um campo existe ou não:
+  - db.pokemon.find( { battle_points: { $exists: true } } )
+- Vamos fazer uma query que buscará informações dentro do embedded document, no caso, dentro do campo **battle_points**, necessário usar aspas duplas e o ponto para acessar o campo do documento:
+  - db.pokemon.find( { "battle_points.hp": { $lte: 40 } } )
+
+# Seção 10 - Updates
+
+## Aula 89. Adicionando campos com o $set
+- Por padrão e para evitar falhas, geralmente começamos buscando o dado a ser alterado:
+  - db.pokemon.find({ name: /^O/ }).pretty()
+- Agora vamos adicionar um novo campo ao 1º documento que começa com 'O':
+  - db.pokemon.updateOne({ name: /^O/ }, { $set: {startsWithO: true} })
+- Receberemos uma resposta desse tipo:
+```json
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedCount: 0
+}
+```
+- O campo **matchedCount** retorna a quantidade de documentos que corresponderam com a query (*name: /^O/*).
+- O campor **modifiedCount** retorna a quantidade de documentos modificados com o update.
+- Podemos também executar um *updateMany* para todos os documentos que começam com 'O':
+  - db.pokemon.updateMany({ name: /^O/ }, { $set: {startsWithO: true} })
+- E seu retorno são 6 documentos correspondetes e 5 documentos alterados:
+```json
+{
+  acknowledged: true,
+  insertedId: null,
+  matchedCount: 6,
+  modifiedCount: 5,
+  upsertedCount: 0
+}
+```
+- O comando **$set** também funciona, não só como uma inserção de campos, mas também funciona como uma alteração de campos:
+  - db.pokemon.updateMany({ name: /^O/ }, { $set: { name: "Alterando o nome original" } })
+
+## Aula 90. Removendo campos com o $unset e entendendo ainda mais o $set
+- Link para [Update Operators](https://www.mongodb.com/docs/manual/reference/operator/update/#update-operators-1).
+- Agora iremos remover o campo que insermos na aula anterior de todos os documentos:
+  - db.pokemon.updateMany({ name: /^O/ }, { $unset: {startsWithO:""} })
+- Podemos passar o campo ao qual vamos excluir com uma string vazia ou qualquer outro valor, só não podemos passavar sem um valor (*$unset: {startsWithO}*) pois não será aceito.
+- Também podemos excluir vários campos, somente separando por vírgula (*$unset: {campo1:valor, campo2:valor, campo3:valor}*).
+
+## Aula 91. Incrementando valores com $inc e $mul
+- Digamos que todos os pokémons do com o campo *types* correspondente a *Fire* ganharão +10 pontos no campo *attack*:
+  - db.pokemon.updateMany({ types: "Fire" }, { $inc: { attack: 10 } })
+- Com o comando **$inc** incrementamos, ou decrementamos o valor do campo informado.
+  - db.pokemon.updateMany({ types: "Fire" }, { $inc: { attack: -10 } })
+- Também podemos multiplicar ou dividir o valor de um campo com o comando **$mul**:
+  - db.pokemon.updateMany({ types: "Fire" }, { $mul: { attack: 3 } })
+  - db.pokemon.updateMany({ types: "Fire" }, { $mul: { attack: 1/3 } })
+
+## Aula 92. Impondo limites aos documentos com $min e $max
+- Comando **$min** atualiza um campo somente se o valor especificado para atualização for menor do que o valor que já existe no campo:
+  - db.pokemon.updateMany({ types: "Fire" }, { $min: { attack: 150 } })
+- Ou seja, se houver um valor acima do especificado pelo comando **$min**, ao executar o comando, o valor acima se tornará exatamente o valor do especificado. Outros abaixo não são alterados. Ou seja, $min é um limite superior.
+- Com isso, vamos alocar um limite inferior com **$max** em toda a base:
+  - db.pokemon.updateMany({}, { $max: { attack: 75 } })
+
+## Aula 
