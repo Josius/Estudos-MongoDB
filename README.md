@@ -827,4 +827,29 @@ db.createCollection("logs", {
 - Com isso, vamos alocar um limite inferior com **$max** em toda a base:
   - db.pokemon.updateMany({}, { $max: { attack: 75 } })
 
+## Aula 93. Dica sobre registrar updates nos documentos utilizando o $currentDate
+- Para alterações de registros, usar:
+  - CreatedAt - registra a data de criação do documento
+  - UpdatedAt - registra a data de alteração do documento
+- Vamos alterar o campo de um documento (nome) e adicionar um novo campo (currentDate):
+  - db.pokemon.updateMany({ types: "Bug" }, { $set: { name: "É do tipo Bug" }, $currentDate: { updatedAt: true } })
+  - db.pokemon.updateMany({ types: "Bug" }, { $set: { name: "É do tipo Bug" }, $currentDate: { updatedAt: { $type: "timestamp" } } })
+- Há dois tipos de datas no mongoDB, uma é a **date**, a qual é a padrão e usada na 1ª opção, e o **timestamp**, a da 2ª opção.
+- Timestamp é a contagem em milissegundo desde 1970.
+
+## Aula 94. O grande segredo do upsert
+## Aula 95. Regra para insert no upsert com o $setOnInsert
+- Digamos que precisamos necessariamente de um certo documento na base, precisamos garantir que haja esse documento. Então, ao fazer uma busca, se houver o documento ok, do contrário, precisamos inserir.
+- Para fazer isso, ao invés de usar dois comandos, um para buscar e outro para inserir, podemos usar um comando somente no update, no caso, upsert true:
+  - db.pokemon.updateOne({ name: "Charmander" }, { $set: { attack: 150 } }, { upsert: true })
+- Bom, com o caso acima o que temos é, se houver o documento, atualize o campo, do contrário, crie o documento. Mas veja que estamos passando somente um campo para a criação e o documento pode conter vários outros campos, logo precisamos de algo:
+  - Se houver o documento, altere o campo.
+  - Do contrário, crie um documento com todos os campos.
+- Abaixo conseguimos isso, com o comando **$setOnInsert**:
+  - db.pokemon.updateOne({ name: "Charmander Braquial" }, { $set: { attack: 150 }, $setOnInsert: { defense: 35, hp: 800, speed: 85 } }, { upsert: true })
+
+## Aula 96. Podemos alterar o _id?
+- Não é possível pois é um campo imutável.
+
+# Seção 11 - Updates de Arrays
 ## Aula 
