@@ -852,4 +852,158 @@ db.createCollection("logs", {
 - Não é possível pois é um campo imutável.
 
 # Seção 11 - Updates de Arrays
+
+## Aula 97. Atualizando elementos dentro de arrays
+- Com o comando **$set** conseguimos alterar o campo **types**, entretanto esse comando altera todo o vetor. O que buscamos agora é alterar o que está dentro do campo do vetor, um único dado. P.e., alterar o '**Poison'** para qualquer outro valor.
+```json
+{
+  _id: 1,
+  types: [ 'Grass', 'Poison' ],
+  name: 'Bulbasaur',
+  legendary: false,
+  battle_points: { hp: 45, attack: 49, defense: 49, speed: 45 },
+  generation: 1,
+  attack: 75
+}
+```
+- Na query precisamos apontar qual o campo e valor a ser alterado e em **$set** usamoas a *dotnotation* para alterar:
+  - db.pokemon.updateOne({ _id:1, types: "Poison" }, { $set: { "types.$": "Lasanha" } })
+- De outra forma, não passamos o campo e valor na query, mas passamos **'[]'** na *dotnotation*, o qual irá trocar todos os valores do vetor para o valor específicado:
+  - db.pokemon.updateOne({ _id:1 }, { $set: { "types.$[]": "Pizza" } })
+
+## Aula 98. Adicionando um elemento em um array com o $push
+- Agora, ao invés de alterar os campos do vetor, vamos adicionar mais um campo/valor ao vetor. Neste caso, o comando **$push** adiciona somente um elemento ao vetor.
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: "Lasanha" } })
+
+## Aula 99. Colocando mais de um elemento no array com o $each
+- Para adicionar mais de um elemento ao vetor, no $push, em types, ao invés de passarmos um valor, passamos um objeto contendo o comando $each e um vetor de valores.
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each:  ["Hotdog", "Hamburguer", "Sorvete"] } } })
+
+## Aula 100. Controlando as insercoes no array com o $position
+- Por padrão, no mongoDB as inserções em vetores ocorrem no final do vetor, ou seja, um novo elemento ao ser adicionado ocupa a última posição do vetor.
+- Podemos mudar esse padrão da seguinte forma:
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each:  ["Esfiha"], $position: 2 } } })
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each:  ["Tomilho", "Alface", "Beterraba"], $position: 1 } } })
+- Ou seja, podemos usar a forma acima tanto para inserir um único elemento no vetor em qualquer posição especificada por **$position** quanto para um conjunto de elementos, iniciando na posição especificada por $position.
+- Não conseguimos usar um $position sem usar um $each.
+
+## Aula 101. Prevenindo insercoes duplicadas em arrays com o $addToSet
+- Com os comandos informados anteriormente, inserções em vetores aceitam valores iguais.
+- Para inserimos algo no vetor e verificar se aquele valor já está presente, e se estiver, não inserir, do contrário inserir, como um upsert, podemos fazer o seguinte:
+  - db.pokemon.updateOne({ _id: 1 }, { $addToSet: { types: "Hamburger" } })
+- O mesmo pode ser usado com $each:
+  - db.pokemon.updateOne({ _id: 1 }, { $addToSet: { types: { $each: ["Hamburger", "Bolo", "Esfiha", "Mousse"] } } })
+
+## Aula 102. Ordenando elementos dos arrays com o $sort
+- Lembrando que $sort pode, por enquanto, assumir o valor de 1 (crescente/alfabética) ou -1 (decrescente):
+- Neste caso, o comando $sort não funciona sem o operador $each:
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each: ["Batata Frita"], $sort: 1 } } })
+- Podemos passar também um vetor vazio de $each, se não quisermos adicionar nada.
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each: [], $sort: -1 } } })
+
+## Aula 103. Removendo parte do array com o $slice
+- Com o comando **$slice** podemos delimitar uma faixa de elementos do vetor [0,N], e o que for superior a N será apagado, por exemplo, $slice: 7 manterá as 7 1ºs elementos do vetor, de 0 até 6.
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each: [], $slice: 7 } } })
+- Também podemos manter os 3 últimos elementos do vetor, passando um número negativo, o qual inverte a ordem de contagem dos elementos:
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each: [], $slice: -3 } } })
+
+## Aula 104. Tratando arrays como filas e listas com o $pop
+- Removendo UM ÚNICO elemento do vetor com o comando **$pop**, com o valor 1 removemos o último elemento, com -1 removemos o 1º elemento. Esse comando não remove mais que um único elemento, como numa fila/pilha.
+  - db.pokemon.updateOne({ _id: 1 }, { $pop: { types: -1 } })
+
+## Aula 105. Removendo elementos de um arrays através de uma query com o $pull
+- O comando **$pull** remove o que for definido através de uma query.
+- Removendo um único elemento:
+  - db.pokemon.updateOne({ _id: 1 }, { $pull: { types: "Esfiha" } })
+- Removendo elementos que correspondam a query presente no campo **$in**. Se houver mais de um elemento com esse valor, eles serão removidos:
+  - db.pokemon.updateOne({ _id: 1 }, { $pull: { types: { $in: ["Esfiha", "Hamburger"] } } })
+
+## Aula 106. Removendo elementos de um array através de uma lista com o $pullAll
+- O comando **$pullAll** remove todos de uma lista. Ele não trabalha com query.
+- Passamos a lista, e se algum elemento da lista corresponder com os elementos do BD, o elemento do BD será removido.
+  - db.pokemon.updateOne({ _id: 1 }, { $pullAll: { types: ["Esfiha", "Hamburger"] } })
+- Funciona como o pull da aula passsada, onde usamos o $in, entretanto, com $in, podemos fazer coisas mais complexas, como usar operadores, por exemplo operadores de comparação. 
+- Se for algo mais simples, sem necessitar de operadores, podemos usar o pullAll.
+
+## Aula 107. Caprichando no types agora sera um array de documentos
+- Alterando o campo **types** para algo mais intrincado:
+  - db.pokemon.updateOne({ _id: 1 }, { $set: { types: [ { name: "Fire", bonus_points: 45, weakness: "Water" }, { name: "Rock", bonus_points: 12, weakness: "Paper" }, { name: "Bug", bonus_points: 14, weakness: "Chinelão" } ] } })
+
+## Aula 109. Como ficariam os comandos num array de documentos
+- O documento vai ter a seguinte estrutura após a alteração da aula passada, usando a técnica do **embedded document**:
+```json
+{
+  _id: 1,
+  types: [
+    { name: 'Fire', bonus_points: 45, weakness: 'Water' },
+    { name: 'Rock', bonus_points: 12, weakness: 'Paper' },
+    { name: 'Bug', bonus_points: 14, weakness: 'Chinelão' }
+  ],
+  name: 'Bulbasaur',
+  legendary: false,
+  battle_points: { hp: 45, attack: 49, defense: 49, speed: 45 },
+  generation: 1,
+  attack: 75
+}
+```
+- Logo, se fossemos usar um operação de **slice** sobre esse novo campo **types**, onde queremos somente os 2 1ºs, não faz diferença o tipo que temos no vetor, funciona da mesma maneira. Inclusive, operações de **push** também seriam da mesma forma, mas ao invés de uma lista, usariamos o objeto:
+  - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each: [{ name: 'value', bonus_points: value, weakness: 'value' }], $position: 2 } } })
+- Agora, para atualizar um valor que está dentro do objeto:
+  - db.pokemon.updateOne({ _id: 1, "types.name": "Fire" }, { $set: { "types.$.bonus_points": 18 } })
+  - No caso acima, o que ocorre é, busque um pokémon, de *id=1*, e dentro do seu campo *types*, procure um objeto que tenha o campo *name-Fire*. Ao encontrar o documento que procuramos, podemos alterar os campos necessários, conforme acima, usando *dotnotation*.
+- E esse sistema também funciona se quisermos adicionar um novo campo ao(s) objeto(s) dentro do campo **types**, conforme aprendemos em aulas anteriores.P.e.:
+- Ou remover esse NOVO_CAMPO
+  - db.pokemon.updateOne({ _id: 1, "types.name": "Fire" }, { $unset: { "types.$.NOVO_CAMPO": true } })
+
+## Aula 110. Ordenando o array de documentos
+- Se quisermos ordernar os objetos dentro do campo **types**, p.e., pelo bonus_points:
+  - db.pokemon.updateOne( { _id: 1 }, { $push: { types: { $each: [], $sort: { bonus_points: 1 } } } } )
+  - E podemos usar outros campos para melhor ordenação, como visto anteriormente.
+
+## Aula 111. Podemos fazer exatamente o que quisermos com nested arrays?
+- MongoDB não suporta updates de vetores acima do 1º nível, logo não conseguiremos usar o placeholder ($) para acessar o campo de um vetor de 2º nível. O update abaixo:
+  - db.pokemon.updateOne( { _id: 1, "types.name": "Fire" }, { $set: { "types.$.strong_against": ["Ice", "Bug", "Poison"] } } )
+- Gerará o seguinte documento:
+```json
+{
+  _id: 1,
+  types: [
+    { name: 'Rock', bonus_points: 12, weakness: 'Paper' },
+    { name: 'Bug', bonus_points: 14, weakness: 'Chinelão' },
+    {
+      name: 'Fire',
+      bonus_points: 18,
+      weakness: 'Water',
+      strong_against: [ 'Ice', 'Bug', 'Poison' ]
+    }
+  ],
+  name: 'Bulbasaur',
+  legendary: false,
+  battle_points: { hp: 45, attack: 49, defense: 49, speed: 45 },
+  generation: 1,
+  attack: 75
+}
+```
+- E se quisermos adicionar/remover mais um elemento ao campo **strong_against** não conseguiremos, pois ele é um vetor dentro de outro vetor, logo, ele é de 2º nível.
+- Para adicionar/remover um elemento desse vetor de 2º nvl, poderíamos:
+  - db.pokemon.updateOne( { _id: 1, "types.name": "Fire" }, { $set: { "types.$.strong_against": ["Ice", "Bug", "Poison", "Rock"] } } )
+  - OU:
+  - db.pokemon.updateOne( { _id: 1, "types.name": "Fire" }, { $set: { "types.$.strong_against": ["Ice", "Poison"] } } )
+
+## Aula 112. Conhecendo dois metodos underground findOneAndUpdate e o findAndModify
+- **findOneAndUpdate** trabalha como o updateOne, mas o retorno é diferente. 
+  - db.pokemon.findOneAndUpdate( { _id: 256 }, { $set: { using_find_one_and_update: true } } )
+- Ele retorna o documento mas sem o campo recém inserido. Ou seja, ele retorna o documento antigo. 
+- Se quiser que retorne o documento atualizado precisamos a flag **returnNewDocument**:
+  - db.pokemon.findOneAndUpdate( { _id: 258 }, { $set: { using_find_one_and_update: true } }, { returnNewDocument: true } )
+- Com **findAndModify** podemos usar ele para executar uma alteração ou para remover um elemento.
+- Fazemos o update de uma forma mais verbosa:
+  - db.pokemon.findAndModify({ query: { _id: 546 }, update: { $set: { using_find_one_and_update: true } } })
+- O retorno é igual ao findOneAndUpdate, para retornar o novo documento:
+  - db.pokemon.findAndModify({ query: { _id: 548 }, update: { $set: { using_find_one_and_update: true } }, new: true })
+- Também podemos usar um remoção com:
+  - db.pokemon.findAndModify({ query: { _id: 548 }, remove: true })
+
+# Seção 12 - Indexes
+
 ## Aula 
