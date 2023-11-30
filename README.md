@@ -879,7 +879,7 @@ db.createCollection("logs", {
 - Para adicionar mais de um elemento ao vetor, no $push, em types, ao invés de passarmos um valor, passamos um objeto contendo o comando $each e um vetor de valores.
   - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each:  ["Hotdog", "Hamburguer", "Sorvete"] } } })
 
-## Aula 100. Controlando as insercoes no array com o $position
+## Aula 100. Controlando as inserções no array com o $position
 - Por padrão, no mongoDB as inserções em vetores ocorrem no final do vetor, ou seja, um novo elemento ao ser adicionado ocupa a última posição do vetor.
 - Podemos mudar esse padrão da seguinte forma:
   - db.pokemon.updateOne({ _id: 1 }, { $push: { types: { $each:  ["Esfiha"], $position: 2 } } })
@@ -1006,4 +1006,235 @@ db.createCollection("logs", {
 
 # Seção 12 - Indexes
 
-## Aula 
+## Aulas 113 até 11
+- Quando executamos uma busca restrita com **find** na base de dados, por exemplo *db.pokemon.find({ name: "Charmander" })*, se houver 1 milhão de documentos e houver somente 1 com o nome buscado, ele verificará todos os documentos. Mas se houver mais de 1, ele retornará todos os documentos com aquele nome. E se não houver nenhum, ele fará a procura em toda a base de dados da mesma forma, ou seja, ele fará uma busca sequencial até o último dado da base.
+- Neste caso, o ideal é, se estamos buscando algo bem específico e único, usamos **findOne**, pois assim que ele encontrar o que buscamos, ele interromperá a leitura dos dados, ou seja, ele não fará a busca por toda a base de dados, dessa forma evitando processamento desnecessário. Ou seja, efetua uma busca sequencial e quando encontrar o dado, interrompe a busca.
+- Uma forma de melhorar a busca é ordenar física os dados com base em um parâmetro, entretanto não é a melhor solução, pois essa ordenação implica na inserção ordenada, pois se quisermos inserir um dado que ficará nos entremeios da base de dados, será necessário mover todos os dados que vem depois da posição dessa inserção uma posição à frente. 
+- **Aula 117** - Idexação é a ordenação em camada lógica, onde um campo aponta para todos os documentos que possuem este campo.
+- **Aula 118** - Explicação de busca binária - precisa de documentos ordenados.
+
+## Aula 120. Confirmando nossas hipóteses com o explain 
+- Comando **explain** permite visualizar parâmetros que ocorreram na execução da busca. 
+  - pokemon_center> db.pokemon.find({attack:{$gte:85}}).explain(). 
+- Dentre toda a estrutura retornada, temos dois campos interessantes, **winningPlan** e **rejectedPlans**.
+- **winningPlan** - é a melhor execução definida pelo mongoDB para efetuar a busca.
+  - Em *winningPlan* também temos um campo importante chamado **stage: 'COLLSCAN'**, o qual, no caso, informa que houve um busca sequencial, passando linha por linha. Se fosse uma busca por id, teríamos **stage: 'IDHACK'**, o qual vai direto no id.
+- **rejectedPlans** - é a lista de execuções rejeitadas pelo mongDB para efetuar a busca. 
+
+## Aula 121. Entendendo bem como o explain funciona e pode nos ajudar
+- Com **explain** podemos passar um parâmetro chamado **executionStats** que traz vários outros parâmetros relacionados a execução, como sucesso, nº de documentos retornados(*nReturned*), tempo de execução, total de ids examinados, total de documentos examinados (*totalDocsExamined*), etc. 
+- O ideal é que o valor em **totalDocsExamined** seja igual ao valor em **nReturned**, pensando no menor valor possível.
+
+## 122. Criando nosso primeiro index
+- O mongoDB cria um index padrão com base nos **_id** dos documentos.
+- Com base na seguinte busca, a qual faz um busca sequencial em todos os documentos (veja *totalDocsExamined* do retorno da busca):
+  - db.pokemon.find({ name: "Umbreon" }).explain('executionStats')
+- Vamos criar um index para melhorar essa busca:
+  - db.pokemon.createIndex({ name: 1 })
+  - index pode ser crescente ou decrescente
+- Após isso, podemos verificar os indexes presentes com:
+  - db.pokemon.getIndexes()
+- Que retorna:
+```json
+[
+  { v: 2, key: { _id: 1 }, name: '_id_' },
+  { v: 2, key: { name: 1 }, name: 'name_1' }
+]
+```
+- Podemos mudar o nome do index com:
+  - pokemon_center> db.pokemon.createIndex({ name: 1 }, { name: "meu_index"  })
+
+## Aula 123. Como ficou nossa query agora com indexes
+- Após a criação do index, ao executarmos:
+  - db.pokemon.find({ name: "Umbreon" }).explain('executionStats')
+- O retorno é mais elaborado por conta do index, inclusive:
+  - Em **inputStage** -> **stage: 'ixseek'**
+- Alterou-se para a busca por index.
+- Um outro ponto é em **executionStats**, onde **totalKeysExamined** agora é 1, no caso, a chave criada para o index:
+```json
+executionStats: {
+    executionSuccess: true,
+    nReturned: 1,
+    executionTimeMillis: 29,
+    totalKeysExamined: 1,
+    totalDocsExamined: 1,
+  ...
+```
+
+## Aula 124. Indexando o campo de attack e verificando as alteracoes
+- Agora, a seguinte busca e seu retorno:
+  -  db.pokemon.find({attack:{$gte:85}}).explain("executionStats")
+```json
+...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 294,
+    executionTimeMillis: 2,
+    totalKeysExamined: 0,
+    totalDocsExamined: 801,
+    executionStages: {
+      stage: 'filter',
+      planNodeId: 1,
+      nReturned: 294,
+      executionTimeMillisEstimate: 0,
+...
+```
+- Criando um index para o campo *attack*:
+  - db.pokemon.createIndex({ attack: 1 }, { name: "index_attack_1" })
+  - db.pokemon.getIndexes()
+```json
+[
+  { v: 2, key: { _id: 1 }, name: '_id_' },
+  { v: 2, key: { name: 1 }, name: 'name_1' },
+  { v: 2, key: { attack: 1 }, name: 'index_attack_1' }
+]
+```
+  - db.pokemon.find({attack:{$gte:85}}).explain("executionStats")
+```json
+...
+    winningPlan: {
+      queryPlan: {
+        stage: 'FETCH',
+        planNodeId: 2,
+        inputStage: {
+          stage: 'IXSCAN',
+          planNodeId: 1,
+          keyPattern: { attack: 1 },
+          indexName: 'index_attack_1',
+          isMultiKey: false,
+          multiKeyPaths: { attack: [] },
+          isUnique: false,
+          isSparse: false,
+          isPartial: false,
+          indexVersion: 2,
+          direction: 'forward',
+          indexBounds: { attack: [ '[85, inf.0]' ] }
+        }
+...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 294,
+    executionTimeMillis: 2,
+    totalKeysExamined: 294,
+    totalDocsExamined: 294,
+...
+  command: {
+    find: 'pokemon',
+    filter: { attack: { '$gte': 85 } },
+    '$db': 'pokemon_center'
+  }
+...
+```
+
+## Aula 125. Entendendo como e executada uma query um pouco mais complexa
+- E como funcionaria com regex:
+  - db.pokemon.find({ name: /^R/}).explain("executionStats")
+```json
+...
+executionStats: {
+  executionSuccess: true,
+    nReturned: 25,
+    executionTimeMillis: 3,
+    totalKeysExamined: 26,
+    totalDocsExamined: 25
+...
+```
+  - db.pokemon.find({ name: /^R/, attack: { $gte: 70 } }).explain("executionStats")
+```json
+ ...
+ rejectedPlans: [
+      {
+        queryPlan: {
+          stage: 'FETCH',
+          planNodeId: 2,
+          filter: { name: { '$regex': '^R' } },
+          inputStage: {
+            stage: 'IXSCAN',
+            planNodeId: 1,
+            keyPattern: { attack: 1 },
+            indexName: 'index_attack_1',
+            isMultiKey: false,
+            multiKeyPaths: { attack: [] },
+            isUnique: false,
+            isSparse: false,
+            isPartial: false,
+            indexVersion: 2,
+            direction: 'forward',
+            indexBounds: { attack: [ '[70, inf.0]' ] }
+          }
+...
+```
+
+## Aula 126. Compound indexes - indexes com mais de um field
+- Queremos criar um index por dois campos (name e attack) para criar uma busca mais complexa, por exemplo, esta busca:
+  - db.pokemon.find({ name: /^R/, attack: { $gte: 100 } }).explain("executionStats")
+- Assim como no *sort*, a ordem dos indícies fazem sentido.
+- Ele pega os nomes, ordena de maneira ascendente, e se houver empate, desempatará com base no attack, de maneira descendente. O 2º comando cria um index com a ordem dos indícies ao contrário:
+  - db.pokemon.createIndex({ name: 1, attack: -1 })
+  - db.pokemon.createIndex({ attack: 1, name: 1 })
+- E temos os seguintes indícies:
+```json
+[
+  { v: 2, key: { _id: 1 }, name: '_id_' },
+  { v: 2, key: { name: 1 }, name: 'name_1' },
+  { v: 2, key: { attack: 1 }, name: 'index_attack_1' },
+  { v: 2, key: { name: 1, attack: -1 }, name: 'name_1_attack_-1' },
+  { v: 2, key: { attack: 1, name: 1 }, name: 'attack_1_name_1' }
+]
+```
+- Então, pelo campo **winningPlan** temos o index utilizado em **indexName: 'name_1_attack_-1'**, o qual foi usado na busca dentre os indícies disponíveis.
+- Pelo campo **rejectedPlans** temos **indexName: 'name_1'**, **indexName: 'index_attack_1'**, **indexName: 'attack_1_name_1'**, os quais são os indícies que foram avaliados a serem usados, mas rejeitados para a busca.
+- E no campo **executionStats**:
+```json
+...
+ executionStats: {
+    executionSuccess: true,
+    nReturned: 6,
+    executionTimeMillis: 7,
+    totalKeysExamined: 26,
+    totalDocsExamined: 6,
+...
+```
+
+## Aula 127. Sugerindo o index para o mongo db utilizar
+- Como o mongoDB escolhe por si próprio qual index utilizar, com o comando **hint** podemos indicar para ele testar um index. E neste caso, ele usará o index sugerido além de testar e mostrar um log de como ele foi utilizado.
+- Precisa necessariamente ser antes do explain e usamos as chaves do index na ordem que está nele:
+  - db.pokemon.find({ name: /^R/, attack: { $gte: 100 } }) .hint({ attack: 1, name: 1 }).explain("executionStats")
+- Em seu retorno não há o campo *rejectedPlans*.
+- Seu *executionStats* temos 30 chaves examinadas a mais do que com o index escolhido por ele mesmo na aula anterior:
+```json
+...
+executionStats: {
+  executionSuccess: true,
+  nReturned: 6,
+  executionTimeMillis: 1,
+  totalKeysExamined: 56,
+  totalDocsExamined: 6
+...
+```
+
+## Aula 128. Excluindo indexes desnecessarios
+- Apagamos indícies com o comando abaixo. Aceita somente um nome por vez.
+  - db.pokemon.dropIndex("NOME-DO-INDEX")
+
+## Aula 129. Compondo indexes com elegancia
+- Digamos que tenhamos uma busca muito usada com base em um ataque elevado e uma defesa baixa.:
+  - db.pokemon.find({ attack: { $gte: 85 }, defense: { $lte: 50 } }).explain("executionStats")
+  - No caso, usando um *count()*, temos 25 documentos.
+- Porém, ao usarmos o *explain("executionStats")* temos **nReturned: 25**. Mas em contrapartida temos **totalDocsExamined: 294** e **totalKeysExamined: 294**.
+- Isso ocorre porque, temos 294 documentos com o campo attack=50 (*db.pokemon.find({ attack: { $gte: 85 } }).count()*) entretanto, o campo **defense** não está sendo coberto por nenhum index, por isso a discrepância entre docs retornados e examinados. 
+- E neste caso, é necessário examinar a *defense* uma a uma.
+- Este é um forte motivo para criar um **compounding index**, como feito anteriormente.
+- Relembrando, queremos ataque alto e defesa baixa, logo:
+  - db.pokemon.createIndex({ attack: 1, defense: -1 }, { name: "ataque_alto_defesa_baixa"})
+- E executando a mesma busca de antes, temos os seguintes dados no campo *executionStats*: 
+```json
+executionStats: {
+  executionSuccess: true,
+  nReturned: 25,
+  executionTimeMillis: 3,
+  totalKeysExamined: 74,
+  totalDocsExamined: 25,
+```
+
+## Aula 130. Nos livrando de indexes redundantes
