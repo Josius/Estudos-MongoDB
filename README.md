@@ -1168,11 +1168,11 @@ executionStats: {
 ## Aula 126. Compound indexes - indexes com mais de um field
 - Queremos criar um index por dois campos (name e attack) para criar uma busca mais complexa, por exemplo, esta busca:
   - db.pokemon.find({ name: /^R/, attack: { $gte: 100 } }).explain("executionStats")
-- Assim como no *sort*, a ordem dos indícies fazem sentido.
-- Ele pega os nomes, ordena de maneira ascendente, e se houver empate, desempatará com base no attack, de maneira descendente. O 2º comando cria um index com a ordem dos indícies ao contrário:
+- Assim como no *sort*, a ordem dos índices fazem sentido.
+- Ele pega os nomes, ordena de maneira ascendente, e se houver empate, desempatará com base no attack, de maneira descendente. O 2º comando cria um index com a ordem dos índices ao contrário:
   - db.pokemon.createIndex({ name: 1, attack: -1 })
   - db.pokemon.createIndex({ attack: 1, name: 1 })
-- E temos os seguintes indícies:
+- E temos os seguintes índices:
 ```json
 [
   { v: 2, key: { _id: 1 }, name: '_id_' },
@@ -1182,8 +1182,8 @@ executionStats: {
   { v: 2, key: { attack: 1, name: 1 }, name: 'attack_1_name_1' }
 ]
 ```
-- Então, pelo campo **winningPlan** temos o index utilizado em **indexName: 'name_1_attack_-1'**, o qual foi usado na busca dentre os indícies disponíveis.
-- Pelo campo **rejectedPlans** temos **indexName: 'name_1'**, **indexName: 'index_attack_1'**, **indexName: 'attack_1_name_1'**, os quais são os indícies que foram avaliados a serem usados, mas rejeitados para a busca.
+- Então, pelo campo **winningPlan** temos o index utilizado em **indexName: 'name_1_attack_-1'**, o qual foi usado na busca dentre os índices disponíveis.
+- Pelo campo **rejectedPlans** temos **indexName: 'name_1'**, **indexName: 'index_attack_1'**, **indexName: 'attack_1_name_1'**, os quais são os índices que foram avaliados a serem usados, mas rejeitados para a busca.
 - E no campo **executionStats**:
 ```json
 ...
@@ -1214,7 +1214,7 @@ executionStats: {
 ```
 
 ## Aula 128. Excluindo indexes desnecessarios
-- Apagamos indícies com o comando abaixo. Aceita somente um nome por vez.
+- Apagamos índices com o comando abaixo. Aceita somente um nome por vez.
   - db.pokemon.dropIndex("NOME-DO-INDEX")
 
 ## Aula 129. Compondo indexes com elegancia
@@ -1238,3 +1238,150 @@ executionStats: {
 ```
 
 ## Aula 130. Nos livrando de indexes redundantes
+- Index consome espaço em disco, logo, não é interessante manter índices que não estão sendo usados.
+```json
+[
+...
+  { v: 2, key: { attack: 1 }, name: 'index_attack_1' },
+  {
+    v: 2,
+    key: { attack: 1, defense: -1 },
+    name: 'ataque_alto_defesa_baixa'
+  }
+]
+```
+- Veja, temos dois index que buscam por ataque, um simples e um composto, mas ainda buscam pela mesma coisa, logo, o simples não é necessário manter.
+- Se executarmos uma busca somente pelo valor do campo *attack*, o mongoDB poderá usar o index simples ou composto, mas independente de qual usar, os resultados em *executionStats* serão os mesmos (verificar com *explain*).
+- Por regra geral, se temos um *single index* e um *compounding index* e em ambos, o 1º campo de índice é o mesmo, não há necessidade de manter o *single index*. Esta regra funciona somente para o 1º campo de índice.
+
+## Aula 131. Multikey indexes em campos do tipo array
+- Sabemos que o campo *types* é um vetor, então executando a busca abaixo fará uma busca sequencial em todos os documentos:
+  - db.pokemon.find({ types: "Fighting" }).explain("executionStats")
+- Um index sobre vetores é a mesma coisa sobre campos comuns:
+  - db.pokemon.createIndex({ types: 1 })
+- E depois de efetuar a mesma busca após criado o index, temos:
+```json
+executionStats: {
+  executionSuccess: true,
+  nReturned: 53,
+  executionTimeMillis: 6,
+  totalKeysExamined: 53,
+  totalDocsExamined: 53
+...
+```
+- E no caso, se fosse um vetor de documentos, usaríamos a *dotnotation*, p.e.:
+  - db.pokemon.createIndex({ "types.name": 1 })
+
+## Aula 132. Vamos jogar um domino?
+- Usar a função *domino()* presente em *\udemy-mongodb\indexes* no terminal do mongosh para implantar uma collection com documentos representando as peças do jogo dominó.
+
+## Aula 134. Manipulando nossas pecas de domino
+- Sejam as seguintes buscas e seus respectivos resultados:
+  - db.domino.find({ piece: [6,6] }, { _id:0 })
+  - *[ { piece: [ 6, 6 ] } ]*
+  - db.domino.find({ piece: [6,4] }, { _id:0 })
+  - *[ { piece: [ 6, 4 ] } ]*
+  - db.domino.find({ piece: [4,6] }, { _id:0 })
+  - *(VAZIO)*
+- Note que a *piece: [6,4]* é a mesma que *piece: [4,6]*, entretanto a 3ª busca não retorna a *piece: [6,4]*, retorna vazio.
+- Note que essas buscas estão procurando uma peça que tenha 6 e 6, 6 e 4, epor fim, 4 e 6. Mas esta busca está errada.
+- Para fazer a busca correta, devemos procurar um documento que tenha todos os elementos 4 e 6, ou seja, um vetor que contenha esses valores:
+  - db.domino.find({ piece: { $all: [4,6] } }, { _id:0 })
+  - *[ { piece: [ 6, 4 ] } ]*
+- Buscando qualquer peça entre 0 e 6, retornará 7 documentos:
+  - db.domino.find({ piece: 3 }, { _id:0 })
+```json
+[
+  { piece: [ 3, 0 ] },
+  { piece: [ 3, 1 ] },
+  { piece: [ 3, 2 ] },
+  { piece: [ 3, 3 ] },
+  { piece: [ 4, 3 ] },
+  { piece: [ 5, 3 ] },
+  { piece: [ 6, 3 ] }
+]
+```
+
+## Aula 135. Criando e utilizando index para nosso jogo de domino
+- Busca e resultado:
+  - db.domino.find({ piece: { $all: [2,3] } }).explain("executionStats")
+  ```json
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 1,
+    executionTimeMillis: 1,
+    totalKeysExamined: 0,
+    totalDocsExamined: 28
+  ```
+- Criamos um index e executamos a mesma busca, em seguida seu resultao:
+  - db.domino.createIndex({ piece: 1 })
+  ```json
+   executionStats: {
+    executionSuccess: true,
+    nReturned: 1,
+    executionTimeMillis: 9,
+    totalKeysExamined: 7,
+    totalDocsExamined: 7
+  ```
+- Pelo que entendi, a busca usando esse index foi efetuada buscando os elementos que tem no índice 0 do vetor o valor 2, em seguida, comparou todos os valores do vetor no índice 1, tentado encontrar um valor de fosse igual ao buscado, no caso, 3. 
+- Ou seja, ele indexou o 1º elemento do vetor, o 2º elemento não é possível indexar, a não ser que fossem campos separados.
+- O mesmo index pode ser usado para fazer a busca por um valor de elemento.
+
+## Aula 136. Simulando um index MultiKey
+- Sejam esses os documentos:
+```json
+doc 1 - { piece: [ 0, 0 ] },
+doc 2 - { piece: [ 1, 0 ] },
+doc 3 - { piece: [ 1, 1 ] },
+doc 4 - { piece: [ 2, 0 ] },
+doc 5 - { piece: [ 2, 1 ] },
+doc 6 - { piece: [ 2, 2 ] },
+doc 7 - { piece: [ 3, 0 ] },
+...
+```
+- Ao criar um índice, ele pega o 1º valor do vetor e indica em qual doc está, em seguida faz o mesmo para o 2º valor. Se ambos valores forem iguais, indica somente uma vez onde está o doc com os valores iguais. Se o index criado for ascendente, teríamos algo como:
+
+| piece | doc |
+| :---: | :---: |
+| 0 | 1 |
+| 0 | 2 |
+| 0 | 4 |
+| 0 | 7 |
+| 1 | 2 |
+| 1 | 3 |
+| 1 | 5 |
+| 2 | 4 |
+| 2 | 5 |
+| 2 | 6 |
+| 3 | 7 |
+...
+
+## Aula 137. Entendendo o index de MultiKey
+- Então, com base no exemplo de index Multikey demonstrado antes, a busca será feita direto nos docs ao invés de ir em todos.
+- Então, buscando um valor [1,1] ele faria a busca em todos os campos do vetor, mas com valor no 1º elemento = 1, [1,x], e *x* seria o valor ao qual é comparado, que no caso seria 7 comparações.
+
+## Aula 138. Outros tipos de indexes no Mongo DB, veja esse [link](https://www.mongodb.com/docs/manual/indexes/)
+
+## Aula 139. Propriedades de indexes, veja esse [link](https://www.mongodb.com/docs/manual/core/indexes/index-properties/#index-properties)
+
+# Seção 13 - Indexes | Laboratório de performance
+
+## Aula 140. O que vamos fazer
+## Aula 141. Entendendo o script e rodando
+- Vamos usar o script *people.js* presente em */udemy-mongodb/indexes/*
+- O comando **getSiblingDB** permite buscar dados de outro BD sem precisar sair do BD atual. P.e., estamos no BD padrão, o *test* e executamos o seguinte comando:
+  - db.getSiblingDB('pokemon_center').pokemon.find()
+- Ele retornará todos os documentos da Collection pokemon, sem sair do BD *test* , sem precisar fazer um *use pokemon_center*.
+- O quê o script *people.js* faz?
+  - Basicamente popula uma collection com dados de pessoas:
+    - têm duas variáveis de vetor, cada um com 21 nomes;
+    - possui uma função para gerar valores aleatórios entre um intervalo especificado;
+    - tem uma variável a qual é atribuída o comando *getSiblingDB*;
+    - tem uma variável para o _id;
+    - com um *while* insere 100 milhões (*1e8*) de dados no BD;
+      - dentro do *while* são criados nomes aleatórios;
+      - inserem na *collection people* uma pessoa com _id, o nome aleatório criado, uma idade aleatória e uma altura aleatória;
+      - a cada 10 mil (*1e4*) inserções, é logado a inserção;
+    - por fim, finaliza enviando uma mensagem.
+
+# Aula 142. Um banco de dados de gente grande
