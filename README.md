@@ -1384,4 +1384,181 @@ doc 7 - { piece: [ 3, 0 ] },
       - a cada 10 mil (*1e4*) inserções, é logado a inserção;
     - por fim, finaliza enviando uma mensagem.
 
-# Aula 142. Um banco de dados de gente grande
+## Aula 143. Qual eh o preco de um index (db.stats)
+- Com o comando **stats** verificamos vários dados sobre a collection a qual estamos usando:
+  - db.stats()
+  ```json  
+  {
+    db: 'lab',
+    collections: Long('1'),
+    views: Long('0'),
+    objects: Long('17942438'),
+    avgObjSize: 59.400304351058644,
+    dataSize: 1065786278,
+    storageSize: 412094464,
+    indexes: Long('1'),
+    indexSize: 199880704,
+    totalSize: 611975168,
+    scaleFactor: Long('1'),
+    fsUsedSize: 123747733504,
+    fsTotalSize: 255391801344,
+    ok: 1
+  }
+  ```
+- Tais como nome do BD, quantidade de collections, quantidade de views, qtde de documentos, tamanho de armazenamento em bytes, entre outras coisas, inclusive **qtde de indexes**.
+- Também podemos usar alguma característica própria do *stats* e calculá-la de alguma forma, por exemplo, saber qual o tamanho do **indexSize** em KB ou MB ou GB:
+  - db.stats().indexSize / 1024 / 1024 / 1024
+- No nosso caso, 190.62MB é o tamanho do index padrão para quase 18 milhões de dados.
+
+## Aula 144. As queries estao levando bastante tempo
+## Aula 145. Adicionando complexidade a query
+- Ao executar uma busca por um nome e sua quantidade a query demorou vários segundos:
+  - db.people.find({name: "Rodrigo Lima"}).count()
+  ```
+  44633
+  ```
+- Com:
+  -  db.people.find({name: "Rodrigo Lima"}).explain("executionStats") 
+- Podemos verificar todo o processo executado na query:
+  ```json
+  ...
+  stage: 'COLLSCAN'
+  ...
+  filter: { name: { '$eq': 'Rodrigo Lima' } }
+  ...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 44633,
+    executionTimeMillis: 16393,
+    totalKeysExamined: 0,
+    totalDocsExamined: 17942438
+  ...
+  ```
+- No caso, demorou ~16 segundos para executar a query em ~18 milhões de documentos.
+- E se retringirmos ainda mais a query:
+  - db.people.find({name: "Rodrigo Lima", height: 184}).explain("executionStats")
+  ```json
+  ...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 640,
+    executionTimeMillis: 15911,
+    totalKeysExamined: 0,
+    totalDocsExamined: 17942438
+  ...
+  ``` 
+- Logo, 640 documentos retornados após ~16 segundos em ler ~18 milhões de documentos.
+
+# Aula 146. Criando um index realmente grande
+# Aula 147. A hora da verdade, sera que o index ajudou mesmo
+- Criando um index com base no nome. Como a base de dados é maior o tempo de criação do index também é maior:
+  - db.people.createIndex({ name: 1 })
+- Com esse simples index, executar a busca abaixo diminiu drásticamente o tempo de retorno:
+  - db.people.find({name: "Rodrigo Lima"}).count()
+  ```json
+  ...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 44633,
+    executionTimeMillis: 105,
+    totalKeysExamined: 44633,
+    totalDocsExamined: 44633
+  ...
+  ``` 
+- Logo, examinou menos documentos e o tempo que era por volta dos 16 segundos reduziu absurdamente para 105 milissegundos. E com um *stats*:
+  - db.stats()
+  ```json
+  {
+    db: 'lab',
+    collections: Long('1'),
+    views: Long('0'),
+    objects: Long('17942438'),
+    avgObjSize: 59.400304351058644,
+    dataSize: 1065786278,
+    storageSize: 412094464,
+    indexes: Long('2'),
+    indexSize: 306294784,
+    totalSize: 718389248,
+    scaleFactor: Long('1'),
+    fsUsedSize: 123840106496,
+    fsTotalSize: 255391801344,
+    ok: 1
+  }
+  ```
+  - E olhando para o *indexSize*, temos 292 MB de tamanho de index.
+
+## Aula 148. Analizando nossas queries com os indexes e crinado um index mais adequado
+## Aula 149. Testando nosso index composto
+- Já a segunda query nos retorna os seguintes parâmetros:
+  - db.people.find({name: "Rodrigo Lima", height: 184}).explain("executionStats")
+  ```json
+  ...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 640,
+    executionTimeMillis: 109,
+    totalKeysExamined: 44633,
+    totalDocsExamined: 44633
+  ...
+  ``` 
+- Houve uma busca um pouco melhorada, a base de documentos examinados é menor e o tempo de execução também. Agora, com um index voltado para essa busca, com base no *name* e no *height*:
+  - db.people.createIndex({ name: 1, height: 1 })
+- E após sua criação, testamos a mesma query e seu retorno é:
+  ```json
+  ...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 640,
+    executionTimeMillis: 6,
+    totalKeysExamined: 640,
+    totalDocsExamined: 640
+  ...
+  ```
+- Uma grande diferença, de +44000 documentos examinados reduzimos para 640 e tempo de execução foi 6 milissegundos. Entretanto, a seguinte busca, em comparação com a anterior a qual havia um index só com *name* aumentou um pouco mais o tempo de execução, pouco coisa:
+  - db.people.find({name: "Rodrigo Lima"}).count()
+  ```json
+  ... 
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 44633,
+    executionTimeMillis: 196,
+    totalKeysExamined: 44633,
+    totalDocsExamined: 44633
+  ... 
+  ```
+- De 105 milissegundos para 196, o que é muito pouco.
+- Entretanto, esse index é um pouco maior que o anterior:
+  - db.stats().indexSize /1024/1024
+  ```
+  336.203125
+  ```
+
+## Aula 150. Sera possivel o mongo nos retornar dados sem examinar nenhum documento
+## Aula 151. O supra sumo da performance covered queries
+- Com a seguinte query:
+  - db.people.find({name: "Rodrigo Lima", height: 184}, { _id: 0, name: 1, height: 1 }).explain("executionStats")
+  ```json
+  ...
+  executionStats: {
+    executionSuccess: true,
+    nReturned: 640,
+    executionTimeMillis: 6,
+    totalKeysExamined: 640,
+    totalDocsExamined: 0
+  ...
+  ```
+- Note que temos um total de **0** documentos examinados.
+- Também temos:
+  ```json
+  ...
+   winningPlan: {
+      queryPlan: {
+        stage: 'PROJECTION_COVERED'
+  ...
+  ```
+- Isso acontece porque a estratégia é verificar o que está no index, e não no documento todo. Veja como está construído o *projection* e o *index*, note que são iguais.
+
+# Seção 14 - Aggregation
+
+## Aula 153. E se os pokemons lutassem?
+- 
