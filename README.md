@@ -600,7 +600,7 @@ db.createCollection("cars", {
 })
 ```
 
-# Aula 49. Testando as validações que criamos
+## Aula 49. Testando as validações que criamos
 - db.cars.drop() - apaga a collection.
 - Como o bsonType do campo year é int (ver exemplo aula anterior), a inserção não pode ser **year: 2022**, pois resultará em erro, pois no js o campo **year** é do tipo **number** (e number aceita ponto flutuante), não **int**. Logo, precisamos usar uma função para converter:
 ```json
@@ -1341,19 +1341,19 @@ doc 7 - { piece: [ 3, 0 ] },
 ```
 - Ao criar um índice, ele pega o 1º valor do vetor e indica em qual doc está, em seguida faz o mesmo para o 2º valor. Se ambos valores forem iguais, indica somente uma vez onde está o doc com os valores iguais. Se o index criado for ascendente, teríamos algo como:
 
-| piece | doc |
+| piece |  doc  |
 | :---: | :---: |
-| 0 | 1 |
-| 0 | 2 |
-| 0 | 4 |
-| 0 | 7 |
-| 1 | 2 |
-| 1 | 3 |
-| 1 | 5 |
-| 2 | 4 |
-| 2 | 5 |
-| 2 | 6 |
-| 3 | 7 |
+|   0   |   1   |
+|   0   |   2   |
+|   0   |   4   |
+|   0   |   7   |
+|   1   |   2   |
+|   1   |   3   |
+|   1   |   5   |
+|   2   |   4   |
+|   2   |   5   |
+|   2   |   6   |
+|   3   |   7   |
 ...
 
 ## Aula 137. Entendendo o index de MultiKey
@@ -1561,4 +1561,428 @@ doc 7 - { piece: [ 3, 0 ] },
 # Seção 14 - Aggregation
 
 ## Aula 153. E se os pokemons lutassem?
-- 
+## Aula 154. Como estão nossos dados e o que queremos
+## Aula 155. Como queremos nossos dados
+- Criar uma nova collection e importar os dados do arquivo **combats.csv**
+- Seus dados estarão assim:
+```json
+{
+  _id: ObjectId('656ddb8ccc9bc42184e526ee'),
+  First_pokemon: 266,
+  Second_pokemon: 298,
+  Winner: 298
+}
+```
+- E queremos alocar os nomes dos pokémons (fist, second e winner) com base no id apresentado:
+```json
+{
+  First_pokemon: Larvitar,
+  Second_pokemon: Nuzleaf,
+  Winner: Nuzleaf
+}
+```
+- Aggregation é executar uma busca baseada em estágios, sendo que a saída do 1º estágio é a entrada do 2º estágio, e a saída do 2º estágio é a entrada do 3º estágio, e assim sucessivamente:
+  - db.combats.aggregate([]) -> semelhante ao *find()*
+- *lookup* e *project* são *stage* de *aggregate*.
+
+## Aula 157. Nosso primero stage de join
+## Aula 158. Buscando o segundo pokemon
+## Aula 159. Como vamos buscar o winner
+- Com base na 1ª busca com aggregate:
+  - db.combats.aggregate([])
+  ```json
+  ...
+  {
+    _id: ObjectId('656ddb8ccc9bc42184e526ff'),
+    First_pokemon: 365,
+    Second_pokemon: 240,
+    Winner: 240
+  },
+  {
+    _id: ObjectId('656ddb8ccc9bc42184e52700'),
+    First_pokemon: 499,
+    Second_pokemon: 774,
+    Winner: 499
+  },
+  ...
+  ```
+- Criamos o 1º stage que é o lookup:
+  ```json
+  db.combats.aggregate([
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "First_pokemon",
+        foreignField: "_id",
+        as: "pokemon1"
+      }
+    }
+  ])
+  ```
+- **from** -> de qual collection será buscada.
+- **localField** -> o campo que está representado o id na collection ao qual está
+- **foreignField** -> campo que será retornado da collection
+- **as** -> cria um campo com base no que foi buscado
+- Teremos como retorno algo do tipo:
+```json
+...
+  {
+    _id: ObjectId('656ddb8ccc9bc42184e52701'),
+    First_pokemon: 563,
+    Second_pokemon: 578,
+    Winner: 563,
+    pokemon1: [
+      {
+        _id: 563,
+        types: [ 'Water' ],
+        name: 'Samurott',
+        legendary: false,
+        hp: 95,
+        attack: 100,
+        defense: 85,
+        speed: 70,
+        generation: 5
+      }
+    ]
+  }
+]
+```
+- Veja que é retornado um vetor ao invés de um objeto, isso porque o mongoDB busca todos que correspondam ao que foi pesquisado.
+- Vamos trazer o segundo pokemon:
+  ```json
+  db.combats.aggregate([
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "First_pokemon",
+        foreignField: "_id",
+        as: "pokemon1"
+      }
+    },
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "Second_pokemon",
+        foreignField: "_id",
+        as: "pokemon2"
+      }
+    }
+  ])
+  ```
+- Como resultado:
+```json
+...
+ {
+    _id: ObjectId('656ddb8ccc9bc42184e52701'),
+    First_pokemon: 563,
+    Second_pokemon: 578,
+    Winner: 563,
+    pokemon1: [
+      {
+        _id: 563,
+        types: [ 'Water' ],
+        name: 'Samurott',
+        legendary: false,
+        hp: 95,
+        attack: 100,
+        defense: 85,
+        speed: 70,
+        generation: 5
+      }
+    ],
+    pokemon2: [
+      {
+        _id: 578,
+        types: [ 'Psychic' ],
+        name: 'Musharna',
+        legendary: false,
+        hp: 116,
+        attack: 75,
+        defense: 85,
+        speed: 29,
+        generation: 5
+      }
+    ]
+  }
+]
+```
+- E para o campo **Winner**, não fazemos outro *lookup* pois já temos esses dados, o que fazemos é uma *projeção*:
+  ```json
+  db.combats.aggregate([
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "First_pokemon",
+        foreignField: "_id",
+        as: "pokemon1"
+      }
+    },
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "Second_pokemon",
+        foreignField: "_id",
+        as: "pokemon2"
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+      }
+    }
+  ])
+  ```
+  
+## Aula 160. Retirando os pokemons dos arrays
+## Aula 161. Retirando o pokemon do array com $arrayElemAt
+## Aula 162. Reformulando nossos dados com o $project
+- Veja o campo **project**:
+  ```json
+  db.combats.aggregate([
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "First_pokemon",
+        foreignField: "_id",
+        as: "pokemon1_arr"
+      }
+    },
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "Second_pokemon",
+        foreignField: "_id",
+        as: "pokemon2_arr"
+      }
+    },
+    {
+      $project: {
+        _id: 0, 
+        Winner: 1,
+        pokemon1: {
+          $arrayElemAt: ["$pokemon1_arr", 0]
+        },
+        pokemon2: {
+          $arrayElemAt: ["$pokemon2_arr", 0]
+        }
+      }
+    }
+  ])
+  ```
+- Em _id:0 -> o id não aparece no retorno
+- Em Winner: 1 -> o Winner é armazenado no project para não perdê-lo
+- Em pokemon1 e pokemon2 remodelamos os vetores, tornando-os em objetos únicos e não um elemento de vetor. E o retorno é algo do tipo:
+  ```json
+  ...
+    {
+      Winner: 563,
+      pokemon1: {
+        _id: 563,
+        types: [ 'Water' ],
+        name: 'Samurott',
+        legendary: false,
+        hp: 95,
+        attack: 100,
+        defense: 85,
+        speed: 70,
+        generation: 5
+      },
+      pokemon2: {
+        _id: 578,
+        types: [ 'Psychic' ],
+        name: 'Musharna',
+        legendary: false,
+        hp: 116,
+        attack: 75,
+        defense: 85,
+        speed: 29,
+        generation: 5
+      }
+    }
+  ]
+  ``` 
+
+## Aula 163. Conhecendo o $cond
+## Aula 164. Criando a condição para buscar o nome do pokemon vencedor
+- Vamos usar um 2º stage de project.
+- Dentro desse project há o $cond, que é um bloco condicional.
+  ```json
+  db.combats.aggregate([
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "First_pokemon",
+        foreignField: "_id",
+        as: "pokemon1_arr"
+      }
+    },
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "Second_pokemon",
+        foreignField: "_id",
+        as: "pokemon2_arr"
+      }
+    },
+    {
+      $project: {
+        _id: 0, 
+        Winner: 1,
+        pokemon1: {
+          $arrayElemAt: ["$pokemon1_arr", 0]
+        },
+        pokemon2: {
+          $arrayElemAt: ["$pokemon2_arr", 0]
+        }
+      }
+    },
+    {
+      $project: {
+        winner: {
+          $cond: {
+            if: {
+              $eq: ["$Winner", "$pokemon1._id"]
+            },
+            then: "$pokemon1.name",
+            else: "$pokemon2.name"
+          }
+        }
+      }
+    }
+  ])
+  ```
+- E retorna somente os winners:
+  ```json
+    [
+    { winner: 'Mantyke' },
+    { winner: 'Zoroark' },
+    { winner: 'Conkeldurr' },
+    { winner: 'É do tipo Bug mesmo' },
+    { winner: 'Zangoose' },
+    { winner: 'Espurr' },
+    { winner: 'Mega Sharpedo' },
+    { winner: 'Pelipper' },
+    { winner: 'Terrakion' },
+    { winner: 'Hitmonlee' },
+    { winner: 'Typhlosion' },
+    { winner: 'Alakazam' },
+    { winner: 'Lilligant' },
+    { winner: 'Serperior' },
+    { winner: 'Kyurem Black Kyurem' },
+    { winner: 'Luxray' },
+    { winner: 'Dewgong' },
+    { winner: 'Azelf' },
+    { winner: 'Staryu' },
+    { winner: 'Latias' }
+  ]
+  ```
+
+## Tarefa - Colocar o first e o second pokémon
+- No caso, somente alocar cada um na última project e atribuir o valor 1:
+```json
+  db.combats.aggregate([
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "First_pokemon",
+        foreignField: "_id",
+        as: "pokemon1_arr"
+      }
+    },
+    {
+      $lookup: {
+        from: "pokemon",
+        localField: "Second_pokemon",
+        foreignField: "_id",
+        as: "pokemon2_arr"
+      }
+    },
+    {
+      $project: {
+        _id: 0, 
+        Winner: 1,
+        pokemon1: {
+          $arrayElemAt: ["$pokemon1_arr", 0]
+        },
+        pokemon2: {
+          $arrayElemAt: ["$pokemon2_arr", 0]
+        }
+      }
+    },
+    {
+      $project: {
+        first_pokemon: "$pokemon1.name",
+        second_pokemon: "$pokemon2.name",
+        winner: {
+          $cond: {
+            if: {
+              $eq: ["$Winner", "$pokemon1._id"]
+            },
+            then: "$pokemon1.name",
+            else: "$pokemon2.name"
+          }
+        }
+      }
+    }
+  ])
+  ```
+- Como retorno:
+  ```json
+  ...
+    {
+      first_pokemon: 'Mega Lucario',
+      second_pokemon: 'Carbink',
+      winner: 'Mega Lucario'
+    },
+    {
+      first_pokemon: 'Samurott',
+      second_pokemon: 'Musharna',
+      winner: 'Samurott'
+    }
+  ]
+  ```
+
+# Seção 15 Aggregation Netflix
+Link para documentação de [aggregation](https://www.mongodb.com/docs/manual/reference/operator/aggregation/#aggregation-operators).
+## Tarefa - Filmes lançados até 2010
+- Quais são os filmes que foram lançados até 2010?
+  - Com find:
+  ```js
+  db.netflix.find({ release_year: { $lte: 2010 } }, { release_year: 1})
+  ```
+- Quais são os filmes que foram adicionados de 2009 até 2010?
+  - Com aggregate:
+  ```js
+  db.netflix.aggregate([
+    {
+        $match: {
+            date_added: {
+                $lte: ISODate("2010-12-31"),
+                $gte: ISODate("2009-01-01")
+            }
+        }
+    }
+  ])  
+  ``` 
+
+## Tarefa: Conhecendo operadores de data como $year
+- Link para documentação do operador [year](https://www.mongodb.com/docs/manual/reference/operator/aggregation/year/#-year--aggregation-)
+- Quais são os filmes que foram adicionados até 2010?
+```js
+  db.netflix.aggregate([
+    {
+      $addFields:{
+        year_added: {
+          $year: "$date_added"
+        }
+      }
+    },
+    {
+      $match: {
+            year_added: {
+              $lte: 2010
+            }
+      }
+    }
+  ])
+  ``` 
